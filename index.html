@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stellar Seat Booking</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap");
+
+    body {
+      font-family: "Outfit", sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-50">
+
+  <!-- Navbar -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <div class="flex items-center cursor-pointer" onclick="showView('home')">
+          <h1 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">🎬
+            Book My Ticket</h1>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="user-greeting" class="text-sm font-medium text-slate-300 hidden md:inline"></span>
+          <button onclick="showView('home')"
+            class="text-sm font-medium text-slate-300 hover:text-white transition-colors">Home</button>
+          <button onclick="showView('bookings')"
+            class="text-sm font-medium text-slate-300 hover:text-white transition-colors">My Bookings</button>
+          <button onclick="logout()"
+            class="text-sm font-medium bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main
+    class="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+
+    <!-- VIEW: Home (Movies) -->
+    <div id="view-home" class="max-w-7xl w-full hidden">
+      <div class="text-center mb-10">
+        <h1 class="text-3xl md:text-5xl font-bold text-white mb-4">Now Showing</h1>
+        <p class="text-slate-400">Select a movie to book your tickets</p>
+      </div>
+      <div id="movies-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- VIEW: Seats (Existing Starter Code wrapped) -->
+    <div id="view-seats" class="hidden w-full flex justify-center">
+      <!-- STARTER CODE WRAPPER -->
+      <div
+        class="max-w-7xl w-full bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-slate-700/50">
+        <div class="mb-4">
+          <button onclick="showView('home')"
+            class="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors">
+            ← Back to Movies
+          </button>
+        </div>
+        <div class="text-center mb-10">
+          <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 mb-4 tracking-tight" id="seat-view-title">
+            Select Your Seats
+          </h1>
+          <p class="text-slate-400 text-lg">Screen 1 • VIP Seating Available</p>
+        </div>
+
+        <div class="flex justify-center mb-10">
+          <div class="bg-slate-900/50 rounded-full px-6 py-3 border border-slate-700 flex gap-6 items-center text-sm">
+            <div class="flex items-center gap-2">
+              <div class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+              <span class="text-slate-300 font-medium">Standard ($10)</span>
+            </div>
+            <div class="w-px h-5 bg-slate-700"></div>
+            <div class="flex items-center gap-2">
+              <div class="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+              <span class="text-slate-300 font-medium">Premium ($15)</span>
+            </div>
+            <div class="w-px h-5 bg-slate-700"></div>
+            <div class="flex items-center gap-2">
+              <div class="w-3.5 h-3.5 rounded-full bg-rose-500/20 border border-rose-500/50"></div>
+              <span class="text-slate-400 font-medium">Booked</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-center justify-center">
+          <!-- Curved Screen Graphic -->
+          <div class="w-full max-w-2xl mb-12 relative flex flex-col items-center">
+            <div class="w-full h-12 border-t-4 border-emerald-500/50 rounded-t-[50%] blur-[2px] opacity-60"></div>
+            <div class="w-full h-12 border-t-8 border-emerald-400 rounded-t-[50%] absolute top-0 shadow-[0_-15px_40px_rgba(16,185,129,0.4)]"></div>
+            <p class="text-slate-400 font-medium uppercase tracking-[0.3em] mt-4">Screen</p>
+          </div>
+
+          <div class="bg-slate-900/40 p-6 sm:p-8 pb-10 rounded-3xl border border-slate-700/50 shadow-inner overflow-x-auto max-w-full">
+            <table id="tbl" class="border-separate border-spacing-2 mx-auto"></table>
+          </div>
+        </div>
+      </div>
+      <!-- END STARTER CODE WRAPPER -->
+    </div>
+
+    <!-- VIEW: Booking Confirmed -->
+    <div id="view-success"
+      class="hidden text-center max-w-lg w-full bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl p-10 border border-slate-700/50">
+      <div
+        class="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
+        ✓
+      </div>
+      <h2 class="text-2xl font-bold text-white mb-2">Booking Confirmed!</h2>
+      <p class="text-slate-400 mb-8" id="success-details">Your seat has been reserved successfully.</p>
+      <button onclick="showView('bookings')"
+        class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold shadow-lg transition-all active:scale-95">
+        View My Bookings
+      </button>
+    </div>
+
+    <!-- VIEW: My Bookings -->
+    <div id="view-bookings" class="hidden max-w-4xl w-full">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-bold text-white">My Bookings</h2>
+        <button onclick="showView('home')" class="text-slate-400 hover:text-white transition-colors">Book new
+          ticket</button>
+      </div>
+      <div class="bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-700 overflow-hidden">
+        <div id="bookings-container" class="divide-y divide-slate-700/50">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Booking Modal -->
+  <div id="booking-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div
+      class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-md p-6 transform transition-all mx-4">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="text-xl font-bold text-white">Confirm Booking</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+      <div class="space-y-4 mb-8">
+        <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 hidden" id="modal-movie-container">
+          <p class="text-sm text-slate-400 mb-1">Movie</p>
+          <p id="modal-movie-name" class="font-semibold text-white">---</p>
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1 bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+            <p class="text-sm text-slate-400 mb-1">Seat</p>
+            <p class="font-bold text-2xl text-emerald-400" id="modal-seat-id">---</p>
+          </div>
+          <div class="flex-1 bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+            <p class="text-sm text-slate-400 mb-1">Price</p>
+            <p class="font-bold text-2xl text-white" id="modal-price">---</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="closeModal()"
+          class="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors">Cancel</button>
+        <button id="btn-confirm-book"
+          class="flex-1 px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-semibold shadow-lg shadow-emerald-500/20 transition-all active:scale-95">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- SPA & AUTH LOGIC ---
+    let authUser = null;
+    let authToken = null;
+    let selectedMovie = null;
+    let pendingSeatBooking = null;
+
+    function checkAuth() {
+      authToken = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      if (!authToken || !userStr) {
+        window.location.href = '/login';
+        return false;
+      }
+      authUser = JSON.parse(userStr);
+      document.getElementById('user-greeting').textContent = 'Hi, ' + authUser.fullname.split(' ')[0];
+      document.getElementById('user-greeting').classList.remove('hidden');
+      return true;
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+
+    function hideAllViews() {
+      ['view-home', 'view-seats', 'view-success', 'view-bookings'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+    }
+
+    function showView(view) {
+      hideAllViews();
+      document.getElementById('view-' + view).classList.remove('hidden');
+
+      if (view === 'home') loadMovies();
+      if (view === 'bookings') loadMyBookings();
+    }
+
+    async function loadMovies() {
+      try {
+        const res = await fetch('/api/movies');
+        const movies = await res.json();
+        const container = document.getElementById('movies-container');
+        container.innerHTML = movies.map(m => `
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all cursor-pointer group" onclick="selectMovie(${m.id}, '${m.title}')">
+              <div class="flex justify-between items-start mb-4">
+                <h3 class="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors">${m.title}</h3>
+                <span class="bg-slate-700 text-xs px-2 py-1 rounded text-slate-300">${m.genre}</span>
+              </div>
+              <div class="flex items-center gap-4 text-sm text-slate-400 mb-6">
+                <span class="flex items-center gap-1">⏱ ${m.duration}</span>
+                <span class="flex items-center gap-1">🕒 ${m.showtime}</span>
+              </div>
+              <button class="w-full mb-0 py-2 bg-slate-700 group-hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors">
+                Select Seats
+              </button>
+            </div>
+          `).join('');
+      } catch (e) { console.error('Error loading movies', e); }
+    }
+
+    function selectMovie(id, title) {
+      selectedMovie = { id, title };
+      
+      // Update Native View Title dynamically
+      const titleEl = document.getElementById('seat-view-title');
+      if (titleEl) {
+        titleEl.textContent = title;
+      }
+
+      // Ensure table is empty before reload
+      document.getElementById("tbl").innerHTML = "";
+
+      showView('seats');
+      run(); // re-fetch seats for this render
+    }
+
+    let pendingSeatLabel = null;
+
+    function openModal(seatId, seatLabel, isPremium) {
+      pendingSeatBooking = seatId;
+      pendingSeatLabel = seatLabel;
+      const price = isPremium ? "$15" : "$10";
+
+      if (selectedMovie) {
+        document.getElementById('modal-movie-container').classList.remove('hidden');
+        document.getElementById('modal-movie-name').textContent = selectedMovie.title;
+      }
+
+      document.getElementById('modal-seat-id').textContent = seatLabel;
+      document.getElementById('modal-price').textContent = price;
+      document.getElementById('booking-modal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      pendingSeatBooking = null;
+      document.getElementById('booking-modal').classList.add('hidden');
+      document.getElementById('btn-confirm-book').textContent = 'Confirm';
+      document.getElementById('btn-confirm-book').disabled = false;
+    }
+
+    document.getElementById('btn-confirm-book').addEventListener('click', async () => {
+      if (!pendingSeatBooking || !selectedMovie) return;
+      const btn = document.getElementById('btn-confirm-book');
+      btn.textContent = 'Booking...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/book', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authToken
+          },
+          body: JSON.stringify({ seatId: pendingSeatBooking, movieId: selectedMovie.id })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert("FAILED! " + (data.error || "Couldn't book."));
+          closeModal();
+          return;
+        }
+
+        // Success
+        closeModal();
+        document.getElementById('success-details').innerHTML = `Seat <b>${pendingSeatLabel}</b> for <br><b>${selectedMovie.title}</b>`;
+        // Clear current seats view to fetch freshly next time
+        document.getElementById("tbl").innerHTML = "";
+        showView('success');
+
+      } catch (ex) {
+        alert('Error booking: ' + ex.message);
+        closeModal();
+      }
+    });
+
+    async function loadMyBookings() {
+      const container = document.getElementById('bookings-container');
+      container.innerHTML = '<div class="p-8 text-center text-slate-400">Loading...</div>';
+      try {
+        const res = await fetch('/api/my-bookings', {
+          headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        const data = await res.json();
+
+        if (!data.bookings || data.bookings.length === 0) {
+          container.innerHTML = '<div class="p-8 text-center text-slate-400 flex flex-col items-center"><span class="text-4xl mb-4">🎟️</span>You have no bookings yet.</div>';
+          return;
+        }
+
+        container.innerHTML = data.bookings.map(b => `
+            <div class="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-700/30 transition-colors">
+              <div>
+                <h4 class="font-bold text-lg text-white mb-1">${b.movie_title}</h4>
+                <div class="text-sm text-slate-400 flex items-center gap-3">
+                  <span>📅 ${new Date(b.booked_at).toLocaleDateString()}</span>
+                  <span>🕒 ${b.movie_showtime}</span>
+                </div>
+              </div>
+              <div class="bg-slate-900/50 border border-slate-700 px-4 py-2 rounded-xl text-center min-w-[100px]">
+                <p class="text-xs text-slate-400 mb-0.5">Seat</p>
+                <p class="font-bold text-xl text-emerald-400">${
+                  (function(id) {
+                    const idx = id - 1;
+                    const r = Math.floor(idx / 10);
+                    const c = idx % 10;
+                    return ['A','B','C','D','E','F','G','H','I','J'][r] + (c + 1);
+                  })(b.seat_id)
+                }</p>
+              </div>
+            </div>
+          `).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="p-8 text-center text-red-400">Failed to load bookings</div>';
+      }
+    }
+
+    // Initialize App Sequence
+    window.onload = function () {
+      if (checkAuth()) {
+        showView('home');
+      }
+    };
+    async function run() {
+      const tbl = document.getElementById("tbl");
+      tbl.innerHTML = "";
+      const res = await fetch("/seats");
+      const resarray = await res.json();
+      const j = resarray.sort((a, b) => a.id - b.id);
+      
+      const rowsCount = 10;
+      const colsCount = 10;
+      const rowLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+      
+      let tr;
+      for (let i = 0; i < j.length; i++) {
+        const rowIndex = Math.floor(i / colsCount);
+        const colIndex = i % colsCount;
+        
+        if (colIndex === 0) {
+            tr = document.createElement("tr");
+            
+            // Add Row Label at the start
+            const labelTd = document.createElement("td");
+            labelTd.className = "text-slate-500 font-bold pr-4 lg:pr-6 align-middle text-sm select-none";
+            labelTd.textContent = rowLabels[rowIndex] || rowIndex;
+            tr.appendChild(labelTd);
+        }
+
+        const td = document.createElement("td");
+        
+        const isPremium = rowIndex >= 7; // Rows H, I, J
+        const seatIdLabel = `${rowLabels[rowIndex]}${colIndex + 1}`;
+
+        // Base aesthetic classes
+        let baseClasses =
+          "w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-center align-middle text-[0.7rem] sm:text-sm font-semibold transition-all duration-300 select-none relative group";
+
+        if (j[i].isbooked) {
+          td.className = `${baseClasses} bg-rose-500/10 text-rose-500/60 border border-rose-500/20 cursor-not-allowed`;
+          td.innerHTML = `
+                    <span class="relative z-10">${colIndex + 1}</span>
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap shadow-xl z-50 pointer-events-none font-normal">
+                        Booked by: <span class="font-bold text-white ml-1">${j[i].name}</span>
+                        <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-[4px] border-transparent border-t-slate-700"></div>
+                    </div>
+                `;
+        } else {
+          // Normal vs Premium Styles
+          if(isPremium) {
+            td.className = `${baseClasses} bg-amber-500 text-amber-950 border-2 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)] cursor-pointer hover:bg-amber-400 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(245,158,11,0.4)] active:scale-95`;
+          } else {
+            td.className = `${baseClasses} bg-emerald-500 text-white border-2 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)] cursor-pointer hover:bg-emerald-400 hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(16,185,129,0.4)] active:scale-95`;
+          }
+          td.innerHTML = `<span class="relative z-10">${colIndex + 1}</span>`;
+        }
+
+        td.addEventListener("click", async function (e) {
+          if (e.currentTarget.classList.contains("cursor-not-allowed")) {
+            return;
+          }
+          openModal(j[i].id, seatIdLabel, isPremium);
+        });
+        
+        tr.appendChild(td);
+        
+        // Add Aisle Spacers
+        if(colIndex === 2 || colIndex === 6) {
+             const spacer = document.createElement("td");
+             spacer.className = "w-4 sm:w-8"; // Aisle spacing
+             tr.appendChild(spacer);
+        }
+
+        tbl.appendChild(tr);
+      }
+    }
+
+    // Removed run() auto-execution here, it is now driven by selecting a movie via the SPA flow
+  </script>
+</body>
+
+</html>

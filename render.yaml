@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: book-my-ticket-api
+    env: node
+    buildCommand: npm install
+    startCommand: node src/db/db-setup.mjs && node index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false

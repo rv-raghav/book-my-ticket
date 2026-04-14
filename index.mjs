@@ -89,19 +89,39 @@ app.get("/api/movies", (req, res) => {
   res.json(movies);
 });
 
-//get all seats
-app.get("/seats", async (req, res) => {
-  const result = await db.select().from(seatsTable);
-  res.send(result);
-});
-
-// --- Get seats for a specific movie (public) ---
-app.get("/api/seats", async (req, res) => {
+// --- Get seats dynamically for a specific movie ---
+app.get("/api/movies/:id/seats", async (req, res) => {
   try {
-    const result = await db.select().from(seatsTable).orderBy(asc(seatsTable.id));
+    const movieId = Number(req.params.id);
+    
+    // Get all 100 physical seats
+    const allSeats = await db.select().from(seatsTable).orderBy(asc(seatsTable.id));
+    
+    // Get bookings for this specific movie
+    const bookings = await db.select({
+      seat_id: bookingsTable.seat_id,
+      user_name: usersTable.fullname
+    })
+    .from(bookingsTable)
+    .innerJoin(usersTable, eq(bookingsTable.user_id, usersTable.id))
+    .where(eq(bookingsTable.movie_id, movieId));
+
+    // Create a map of booked seats (seat_id -> user_name)
+    const bookedSeatsMap = {};
+    for (const b of bookings) {
+      bookedSeatsMap[b.seat_id] = b.user_name;
+    }
+
+    // Merge static seats with dynamic booking status for this movie
+    const result = allSeats.map(seat => ({
+      ...seat,
+      isbooked: bookedSeatsMap[seat.id] ? 1 : 0,
+      name: bookedSeatsMap[seat.id] || null // Name of the booker!
+    }));
+
     res.json(result);
   } catch (ex) {
-    console.log(ex);
+    console.error("Fetch seats error:", ex);
     res.status(500).json({ error: "Failed to fetch seats" });
   }
 });
@@ -167,21 +187,8 @@ app.post("/api/book", authMiddleware, async (req, res) => {
     }
 
     const bookingResult = await db.transaction(async (tx) => {
-      // Check if seat is available (using FOR UPDATE to prevent race conditions)
-      const checkResult = await tx
-        .select()
-        .from(seatsTable)
-        .where(
-          and(
-            eq(seatsTable.id, seatId),
-            eq(seatsTable.isbooked, 0)
-          )
-        )
-        .for("update");
-
-      if (checkResult.length === 0) {
-        throw new Error("Conflict: Seat already booked");
-      }
+      // NOT checking seatsTable.isbooked because seats are now movie-specific!
+      // This checking is entirely handled by the duplicate check below.
 
       // Check for duplicate booking
       const dupResult = await tx
@@ -198,12 +205,8 @@ app.post("/api/book", authMiddleware, async (req, res) => {
         throw new Error("Conflict: This seat is already booked for this movie");
       }
 
-      // Update the seat
-      await tx
-        .update(seatsTable)
-        .set({ isbooked: 1, name: userName })
-        .where(eq(seatsTable.id, seatId));
-
+      // We DO NOT update seatsTable anymore, because seat booking is local to the movie!
+      
       // Insert booking record
       const insertData = await tx
         .insert(bookingsTable)

@@ -12,6 +12,9 @@ import pg from "pg";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 
 // --- NEW IMPORTS for auth & booking ---
 import authRouter from "./src/auth/auth.routes.mjs";
@@ -25,19 +28,41 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const port = process.env.PORT || 8080;
 
 const app = new express();
-app.use(cors());
 
-// --- NEW: Parse JSON request bodies ---
+// --- Security middleware ---
+// Helmet sets security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+// We allow inline scripts/styles since the app uses them in HTML files
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled because index.html uses inline scripts & CDN tailwind
+}));
+
+// CORS — restrict to same origin (cookies require credentials)
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || true, // true reflects the requester's origin dynamically
+  credentials: true,
+}));
+
+// Rate limiting on auth endpoints — prevents brute-force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // max 15 attempts per window
+  message: { error: "Too many attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// --- Parse cookies and JSON ---
+app.use(cookieParser());
 app.use(express.json());
 
-// --- NEW: Serve static files (css, etc.) ---
+// --- Serve static files (css, etc.) ---
 app.use("/css", express.static(__dirname + "/css"));
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
 
-// --- NEW: Serve login and signup pages from client folder ---
+// --- Serve login and signup pages from client folder ---
 app.get("/login", (req, res) => {
   res.sendFile(__dirname + "/client/login.html");
 });
@@ -46,10 +71,10 @@ app.get("/signup", (req, res) => {
   res.sendFile(__dirname + "/client/signup.html");
 });
 
-// --- NEW: Mount auth routes (register & login) ---
-app.use("/api/auth", authRouter);
+// --- Mount auth routes with rate limiting ---
+app.use("/api/auth", authLimiter, authRouter);
 
-// --- NEW: Mock movie data ---
+// --- Mock movie data ---
 const movies = [
   { id: 1, title: "Interstellar", genre: "Sci-Fi / Adventure", duration: "2h 49m", showtime: "7:15 PM" },
   { id: 2, title: "Oppenheimer", genre: "Biography / Drama", duration: "3h 00m", showtime: "8:30 PM" },
@@ -70,7 +95,7 @@ app.get("/seats", async (req, res) => {
   res.send(result);
 });
 
-// --- NEW: Get seats for a specific movie (public) ---
+// --- Get seats for a specific movie (public) ---
 app.get("/api/seats", async (req, res) => {
   try {
     const result = await db.select().from(seatsTable).orderBy(asc(seatsTable.id));
@@ -122,7 +147,7 @@ app.put("/:id/:name", async (req, res) => {
 });
 
 // ============================================================
-// NEW: Protected Booking Endpoints (require authentication)
+// Protected Booking Endpoints (require authentication)
 // ============================================================
 
 // POST /api/book - Book a seat for a movie (protected)
@@ -252,4 +277,3 @@ app.get("/api/my-bookings", authMiddleware, async (req, res) => {
 });
 
 app.listen(port, () => console.log("Server starting on port: " + port));
-

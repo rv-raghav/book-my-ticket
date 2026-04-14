@@ -1,23 +1,30 @@
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../auth/auth.service.mjs";
+import { verifyToken } from "../auth/auth.service.mjs";
 
 /**
  * Authentication middleware
- * Verifies the JWT token from the Authorization header
+ * Reads the JWT from the httpOnly cookie (set by login/register)
+ * Falls back to Authorization header for API clients
  * Attaches the decoded user to req.user
  */
 export function authMiddleware(req, res, next) {
   try {
-    const authHeader = req.headers.authorization;
+    // Primary: read from httpOnly cookie
+    let token = req.cookies?.token;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    // Fallback: Authorization header (for API/testing tools)
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+      }
+    }
+
+    if (!token) {
       return res.status(401).json({ error: "Access denied. No token provided." });
     }
 
-    const token = authHeader.split(" ")[1];
-
     // Verify and decode the token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = verifyToken(token);
 
     // Attach user info to request object for downstream handlers
     req.user = {

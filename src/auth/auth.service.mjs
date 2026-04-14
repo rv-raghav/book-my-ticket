@@ -4,7 +4,13 @@ import { db } from "../db/db.mjs";
 import { usersTable } from "../db/schema.mjs";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "book-my-ticket-secret-key-2026";
+// Fail fast if JWT_SECRET is not configured — never fall back to a hardcoded value
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is not set. Exiting.");
+  process.exit(1);
+}
+
 const JWT_EXPIRES_IN = "24h";
 
 /**
@@ -77,6 +83,14 @@ export async function loginUser(dto) {
 }
 
 /**
+ * Verify a JWT token and return the decoded user payload
+ * Used by the /me endpoint and auth middleware
+ */
+export function verifyToken(token) {
+  return jwt.verify(token, JWT_SECRET);
+}
+
+/**
  * Generate a JWT token for the given user
  * @param {Object} user - User object with id, fullname, email
  * @returns {string} JWT token
@@ -88,5 +102,3 @@ function generateToken(user) {
     { expiresIn: JWT_EXPIRES_IN }
   );
 }
-
-export { JWT_SECRET };

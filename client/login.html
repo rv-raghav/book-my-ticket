@@ -129,11 +129,15 @@
     </div>
 
     <script>
-        // Check if already logged in
-        const token = localStorage.getItem('token');
-        if (token) {
-            window.location.href = '/';
-        }
+        // Check if already logged in via cookie (server validates)
+        (async () => {
+            try {
+                const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+                if (res.ok) {
+                    window.location.href = '/';
+                }
+            } catch (e) { /* not logged in, stay on page */ }
+        })();
 
         function togglePassword() {
             const passwordInput = document.getElementById('password');
@@ -180,6 +184,7 @@
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin', // send/receive cookies
                     body: JSON.stringify({ email, password }),
                 });
 
@@ -191,10 +196,6 @@
                     submitBtn.textContent = 'Sign In';
                     return;
                 }
-
-                // Store token and user info
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
 
                 showSuccess('Login successful! Redirecting...');
 

@@ -173,28 +173,45 @@
   </div>
 
   <script>
+    // --- XSS Protection: escape user-controlled strings before injecting into HTML ---
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
     // --- SPA & AUTH LOGIC ---
     let authUser = null;
-    let authToken = null;
     let selectedMovie = null;
     let pendingSeatBooking = null;
 
-    function checkAuth() {
-      authToken = localStorage.getItem('token');
-      const userStr = localStorage.getItem('user');
-      if (!authToken || !userStr) {
+    // Check auth via server-validated cookie (no localStorage)
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (!res.ok) {
+          window.location.href = '/login';
+          return false;
+        }
+        const data = await res.json();
+        authUser = data.user;
+        document.getElementById('user-greeting').textContent = 'Hi, ' + escapeHtml(authUser.fullname.split(' ')[0]);
+        document.getElementById('user-greeting').classList.remove('hidden');
+        return true;
+      } catch (e) {
         window.location.href = '/login';
         return false;
       }
-      authUser = JSON.parse(userStr);
-      document.getElementById('user-greeting').textContent = 'Hi, ' + authUser.fullname.split(' ')[0];
-      document.getElementById('user-greeting').classList.remove('hidden');
-      return true;
     }
 
-    function logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+      } catch (e) { /* proceed to redirect regardless */ }
       window.location.href = '/login';
     }
 
@@ -214,18 +231,18 @@
 
     async function loadMovies() {
       try {
-        const res = await fetch('/api/movies');
+        const res = await fetch('/api/movies', { credentials: 'same-origin' });
         const movies = await res.json();
         const container = document.getElementById('movies-container');
         container.innerHTML = movies.map(m => `
-            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all cursor-pointer group" onclick="selectMovie(${m.id}, '${m.title}')">
+            <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all cursor-pointer group" onclick="selectMovie(${m.id}, '${escapeHtml(m.title)}')"">
               <div class="flex justify-between items-start mb-4">
-                <h3 class="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors">${m.title}</h3>
-                <span class="bg-slate-700 text-xs px-2 py-1 rounded text-slate-300">${m.genre}</span>
+                <h3 class="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors">${escapeHtml(m.title)}</h3>
+                <span class="bg-slate-700 text-xs px-2 py-1 rounded text-slate-300">${escapeHtml(m.genre)}</span>
               </div>
               <div class="flex items-center gap-4 text-sm text-slate-400 mb-6">
-                <span class="flex items-center gap-1">⏱ ${m.duration}</span>
-                <span class="flex items-center gap-1">🕒 ${m.showtime}</span>
+                <span class="flex items-center gap-1">⏱ ${escapeHtml(m.duration)}</span>
+                <span class="flex items-center gap-1">🕒 ${escapeHtml(m.showtime)}</span>
               </div>
               <button class="w-full mb-0 py-2 bg-slate-700 group-hover:bg-emerald-500 text-white rounded-xl font-medium transition-colors">
                 Select Seats
@@ -284,10 +301,8 @@
       try {
         const res = await fetch('/api/book', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + authToken
-          },
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify({ seatId: pendingSeatBooking, movieId: selectedMovie.id })
         });
 
@@ -300,7 +315,7 @@
 
         // Success
         closeModal();
-        document.getElementById('success-details').innerHTML = `Seat <b>${pendingSeatLabel}</b> for <br><b>${selectedMovie.title}</b>`;
+        document.getElementById('success-details').innerHTML = `Seat <b>${escapeHtml(pendingSeatLabel)}</b> for <br><b>${escapeHtml(selectedMovie.title)}</b>`;
         // Clear current seats view to fetch freshly next time
         document.getElementById("tbl").innerHTML = "";
         showView('success');
@@ -316,7 +331,7 @@
       container.innerHTML = '<div class="p-8 text-center text-slate-400">Loading...</div>';
       try {
         const res = await fetch('/api/my-bookings', {
-          headers: { 'Authorization': 'Bearer ' + authToken }
+          credentials: 'same-origin',
         });
         const data = await res.json();
 
@@ -328,10 +343,10 @@
         container.innerHTML = data.bookings.map(b => `
             <div class="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-700/30 transition-colors">
               <div>
-                <h4 class="font-bold text-lg text-white mb-1">${b.movie_title}</h4>
+                <h4 class="font-bold text-lg text-white mb-1">${escapeHtml(b.movie_title)}</h4>
                 <div class="text-sm text-slate-400 flex items-center gap-3">
-                  <span>📅 ${new Date(b.booked_at).toLocaleDateString()}</span>
-                  <span>🕒 ${b.movie_showtime}</span>
+                  <span>📅 ${escapeHtml(new Date(b.booked_at).toLocaleDateString())}</span>
+                  <span>🕒 ${escapeHtml(b.movie_showtime)}</span>
                 </div>
               </div>
               <div class="bg-slate-900/50 border border-slate-700 px-4 py-2 rounded-xl text-center min-w-[100px]">
@@ -353,15 +368,15 @@
     }
 
     // Initialize App Sequence
-    window.onload = function () {
-      if (checkAuth()) {
+    window.onload = async function () {
+      if (await checkAuth()) {
         showView('home');
       }
     };
     async function run() {
       const tbl = document.getElementById("tbl");
       tbl.innerHTML = "";
-      const res = await fetch("/seats");
+      const res = await fetch("/seats", { credentials: 'same-origin' });
       const resarray = await res.json();
       const j = resarray.sort((a, b) => a.id - b.id);
       
@@ -398,7 +413,7 @@
           td.innerHTML = `
                     <span class="relative z-10">${colIndex + 1}</span>
                     <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap shadow-xl z-50 pointer-events-none font-normal">
-                        Booked by: <span class="font-bold text-white ml-1">${j[i].name}</span>
+                        Booked by: <span class="font-bold text-white ml-1">${escapeHtml(j[i].name)}</span>
                         <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-[4px] border-transparent border-t-slate-700"></div>
                     </div>
                 `;

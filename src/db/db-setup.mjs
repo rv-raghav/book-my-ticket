@@ -17,30 +17,41 @@ const DB_NAME = process.env.DB_NAME || "sql_class_2_db";
 async function setup() {
   console.log("🔧 Starting database setup...\n");
 
+  const hasConnectionString = !!process.env.DATABASE_URL;
+
   // Step 1: Connect to default 'postgres' database to create our database
-  const adminPool = new pg.Pool({ ...DB_CONFIG, database: "postgres" });
+  // Skip this if using a cloud provider (via DATABASE_URL), as they provision the DB for us
+  if (!hasConnectionString) {
+    const adminPool = new pg.Pool({ ...DB_CONFIG, database: "postgres" });
 
-  try {
-    const dbCheck = await adminPool.query(
-      "SELECT 1 FROM pg_database WHERE datname = $1",
-      [DB_NAME]
-    );
+    try {
+      const dbCheck = await adminPool.query(
+        "SELECT 1 FROM pg_database WHERE datname = $1",
+        [DB_NAME]
+      );
 
-    if (dbCheck.rowCount === 0) {
-      await adminPool.query(`CREATE DATABASE ${DB_NAME}`);
-      console.log(`✅ Database "${DB_NAME}" created`);
-    } else {
-      console.log(`✅ Database "${DB_NAME}" already exists`);
+      if (dbCheck.rowCount === 0) {
+        await adminPool.query(`CREATE DATABASE ${DB_NAME}`);
+        console.log(`✅ Database "${DB_NAME}" created`);
+      } else {
+        console.log(`✅ Database "${DB_NAME}" already exists`);
+      }
+    } catch (err) {
+      console.error("❌ Error creating database:", err.message);
+      process.exit(1);
+    } finally {
+      await adminPool.end();
     }
-  } catch (err) {
-    console.error("❌ Error creating database:", err.message);
-    process.exit(1);
-  } finally {
-    await adminPool.end();
+  } else {
+      console.log(`✅ Using provided DATABASE_URL logic (skipping DB creation step)`);
   }
 
   // Step 2: Connect to our database and create tables
-  const appPool = new pg.Pool({ ...DB_CONFIG, database: DB_NAME });
+  const poolConfig = hasConnectionString
+    ? { connectionString: process.env.DATABASE_URL }
+    : { ...DB_CONFIG, database: DB_NAME };
+
+  const appPool = new pg.Pool(poolConfig);
 
   try {
     // WIPE existings due to map sizing changes
